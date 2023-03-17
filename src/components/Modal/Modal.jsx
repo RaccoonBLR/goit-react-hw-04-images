@@ -8,15 +8,15 @@ const modalRoot = document.querySelector('#modal-root');
 
 export const Modal = ({ onClose, currentModalData }) => {
   useEffect(() => {
+    const handleKeyDown = ({ code }) => code === 'Escape' && onClose();
+
     window.addEventListener('keydown', handleKeyDown);
 
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [onClose]);
 
   const handleClick = ({ target, currentTarget }) =>
     target === currentTarget && onClose();
-
-  const handleKeyDown = ({ code }) => code === 'Escape' && onClose();
 
   const { largeImageURL, tags } = currentModalData;
 

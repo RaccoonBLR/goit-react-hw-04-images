@@ -7,37 +7,21 @@ const apiService = new ImagesApiService();
 
 export const App = () => {
   const [searchQuery, setSearchQuery] = useState(null);
+  const [submitEvent, setSubmitEvent] = useState(null);
 
-  const handleSearchQuery = searchValue => setSearchQuery(searchValue);
+  const handleSearchQuery = searchValue => {
+    setSearchQuery(searchValue);
+    setSubmitEvent(Symbol(searchValue));
+  };
 
   return (
     <>
       <Searchbar onSubmit={handleSearchQuery} />
-      <ImageGallery searchQuery={searchQuery} apiService={apiService} />
+      <ImageGallery
+        searchQuery={searchQuery}
+        apiService={apiService}
+        submitEvent={submitEvent}
+      />
     </>
   );
 };
-
-// export class App extends Component {
-//   state = {
-//     searchImageQuery: null,
-//   };
-
-//   handleSearchImageQuery = searchImageQuery => {
-//     this.setState({ searchImageQuery });
-//   };
-
-//   render() {
-//     const { searchImageQuery } = this.state;
-
-//     return (
-//       <>
-//         <Searchbar onSubmit={this.handleSearchImageQuery} />
-//         <ImageGallery
-//           searchImageQuery={searchImageQuery}
-//           apiService={apiService}
-//         />
-//       </>
-//     );
-//   }
-// }

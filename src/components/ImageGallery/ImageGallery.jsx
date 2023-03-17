@@ -6,14 +6,24 @@ import { Modal } from 'components/Modal/Modal';
 import { Loader } from 'components/Loader/Loader';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { enterRequest, endOfResults, noMatches } from 'notifications';
 import PropTypes from 'prop-types';
 
-export const ImageGallery = ({ apiService, searchQuery }) => {
+export const ImageGallery = ({ apiService, searchQuery, submitEvent }) => {
   const [images, setImages] = useState([]);
   const [pending, setPending] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showLoadMore, setShowLoadMore] = useState(false);
   const [modalData, setModalData] = useState({});
+
+  useEffect(() => {
+    const id = 1;
+
+    searchQuery === '' &&
+      toast.info(enterRequest, {
+        toastId: id,
+      });
+  }, [searchQuery, submitEvent]);
 
   useEffect(() => {
     if (!searchQuery) {
@@ -31,16 +41,9 @@ export const ImageGallery = ({ apiService, searchQuery }) => {
       .then(({ hits, totalHits }) => {
         const isLastRequest = totalHits <= apiService.page * apiService.perPage;
 
-        !totalHits &&
-          toast.info(
-            'Sorry, there are no images matching your search query. Please try again.'
-          );
+        !totalHits && toast.info(noMatches);
 
-        isLastRequest &&
-          totalHits &&
-          toast.info(
-            `We're sorry, but you've reached the end of search results.`
-          );
+        isLastRequest && totalHits && toast.info(endOfResults);
 
         setImages(hits);
         onTogglePending();
@@ -75,10 +78,7 @@ export const ImageGallery = ({ apiService, searchQuery }) => {
       .then(({ hits, totalHits }) => {
         const isLastRequest = totalHits <= apiService.page * apiService.perPage;
 
-        isLastRequest &&
-          toast.info(
-            `We're sorry, but you've reached the end of search results.`
-          );
+        isLastRequest && toast.info(endOfResults);
 
         setImages(prevImages => [...prevImages, ...hits]);
         onTogglePending();
@@ -102,7 +102,7 @@ export const ImageGallery = ({ apiService, searchQuery }) => {
 
       {pending && <Loader />}
       {showLoadMore && <LoadMore onLoadMore={onLoadMore} />}
-      <ToastContainer />
+      <ToastContainer draggable={false} autoClose={3000} theme={'light'} />
     </>
   );
 };
