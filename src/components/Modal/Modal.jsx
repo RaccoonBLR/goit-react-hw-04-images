@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Overlay, ModalWindow, ModalImage, CloseButton } from './Modal.styled';
 import { ImCross } from 'react-icons/im';
@@ -6,43 +6,32 @@ import PropTypes from 'prop-types';
 
 const modalRoot = document.querySelector('#modal-root');
 
-export class Modal extends Component {
-  componentDidMount() {
-    window.addEventListener('keydown', this.handleKeyDown);
-  }
+export const Modal = ({ onClose, currentModalData }) => {
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
 
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleKeyDown);
-  }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-  handleKeyDown = ({ code }) => {
-    if (code === 'Escape') {
-      this.props.onClose();
-    }
-  };
+  const handleClick = ({ target, currentTarget }) =>
+    target === currentTarget && onClose();
 
-  handleClick = ({ target, currentTarget }) => {
-    if (target === currentTarget) {
-      this.props.onClose();
-    }
-  };
+  const handleKeyDown = ({ code }) => code === 'Escape' && onClose();
 
-  render() {
-    const { largeImageURL, tags } = this.props.currentModalData;
+  const { largeImageURL, tags } = currentModalData;
 
-    return createPortal(
-      <Overlay onClick={this.handleClick}>
-        <ModalWindow>
-          <ModalImage src={largeImageURL} alt={tags} />
-        </ModalWindow>
-        <CloseButton type="button" onClick={this.handleClick}>
-          <ImCross size={36} />
-        </CloseButton>
-      </Overlay>,
-      modalRoot
-    );
-  }
-}
+  return createPortal(
+    <Overlay onClick={handleClick}>
+      <ModalWindow>
+        <ModalImage src={largeImageURL} alt={tags} />
+      </ModalWindow>
+      <CloseButton type="button" onClick={handleClick}>
+        <ImCross size={36} />
+      </CloseButton>
+    </Overlay>,
+    modalRoot
+  );
+};
 
 Modal.propTypes = {
   onClose: PropTypes.func.isRequired,

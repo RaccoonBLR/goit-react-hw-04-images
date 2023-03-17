@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { List } from './ImageGallery.styled';
 import { ImageGalleryItem } from 'components/ImageGalleryItem/ImageGalleryItem';
 import { LoadMore } from 'components/Button/Button';
@@ -8,138 +8,104 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import PropTypes from 'prop-types';
 
-export class ImageGallery extends Component {
-  state = {
-    images: [],
-    pending: false,
-    showModal: false,
-    showLoadMore: false,
-    currentModalData: {},
-    error: null,
-  };
+export const ImageGallery = ({ apiService, searchQuery }) => {
+  const [images, setImages] = useState([]);
+  const [pending, setPending] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showLoadMore, setShowLoadMore] = useState(false);
+  const [modalData, setModalData] = useState({});
 
-  componentDidUpdate(prevProps) {
-    const prevQuery = prevProps.searchImageQuery;
-    const { apiService, searchImageQuery: nextQuery } = this.props;
-
-    if (prevQuery !== nextQuery) {
-      if (!nextQuery) {
-        toast.info('Please enter your request in the search box');
-        return;
-      }
-
-      this.setState(({ pending }) => ({
-        pending: !pending,
-      }));
-      apiService.resetPage();
-      apiService.query = nextQuery;
-      apiService
-        .fetchImages()
-        .then(response =>
-          response.ok ? response.json() : Promise.reject(new Error('Ошибка'))
-        )
-        .then(({ hits: images, totalHits }) => {
-          const isLastQuery = totalHits <= apiService.page * apiService.perPage;
-
-          !totalHits &&
-            toast.info(
-              'Sorry, there are no images matching your search query. Please try again.'
-            );
-
-          isLastQuery &&
-            totalHits &&
-            toast.info(
-              `We're sorry, but you've reached the end of search results.`
-            );
-
-          this.setState(({ pending }) => ({
-            images,
-            pending: !pending,
-            showLoadMore: !isLastQuery,
-          }));
-        })
-        .catch(error =>
-          this.setState(({ pending }) => ({ error, pending: !pending }))
-        );
+  useEffect(() => {
+    if (!searchQuery) {
       return;
     }
-  }
 
-  onLoadMore = () => {
-    const { apiService } = this.props;
-
-    this.props.apiService.incrementPage();
-    this.setState(({ pending }) => ({
-      pending: !pending,
-    }));
-
+    onTogglePending();
+    apiService.resetPage();
+    apiService.query = searchQuery;
     apiService
       .fetchImages()
-      .then(response =>
-        response.ok ? response.json() : Promise.reject(new Error('Ошибка'))
+      .then(resp =>
+        resp.ok ? resp.json() : Promise.reject(new Error('Ошибка'))
       )
-      .then(({ hits: newImages, totalHits }) => {
-        const isLastQuery = totalHits <= apiService.page * apiService.perPage;
+      .then(({ hits, totalHits }) => {
+        const isLastRequest = totalHits <= apiService.page * apiService.perPage;
 
-        isLastQuery &&
+        !totalHits &&
+          toast.info(
+            'Sorry, there are no images matching your search query. Please try again.'
+          );
+
+        isLastRequest &&
+          totalHits &&
           toast.info(
             `We're sorry, but you've reached the end of search results.`
           );
 
-        this.setState(({ images, pending }) => ({
-          images: [...images, ...newImages],
-          pending: !pending,
-          showLoadMore: !isLastQuery,
-        }));
+        setImages(hits);
+        onTogglePending();
+        setShowLoadMore(!isLastRequest);
       })
-      .catch(error =>
-        this.setState(({ pending }) => ({ error, pending: !pending }))
-      );
-  };
+      .catch(error => {
+        onTogglePending();
+        toast.error(error);
+      });
+  }, [searchQuery, apiService]);
 
-  onToggleModal = () => {
-    this.setState(({ showModal }) => ({ showModal: !showModal }));
-  };
+  const onToggleModal = () => setShowModal(state => !state);
+  const onTogglePending = () => setPending(state => !state);
 
-  onHandleClick = evt => {
-    const { images } = this.state;
+  const onHandleClick = evt => {
     const searchedId = Number(evt.target.id);
+    const currentModalData = images.find(({ id }) => id === searchedId);
 
-    this.setState({
-      currentModalData: images.find(({ id }) => id === searchedId),
-    });
-
-    this.onToggleModal();
+    setModalData(currentModalData);
+    onToggleModal();
   };
-  render() {
-    const { images, pending, showLoadMore, showModal, currentModalData } =
-      this.state;
 
-    return (
-      <>
-        <ToastContainer />
+  const onLoadMore = () => {
+    apiService.incrementPage();
+    onTogglePending();
 
-        <List>
-          <ImageGalleryItem
-            images={images}
-            onHandleClick={this.onHandleClick}
-          />
-        </List>
+    apiService
+      .fetchImages()
+      .then(resp =>
+        resp.ok ? resp.json() : Promise.reject(new Error('Ошибка'))
+      )
+      .then(({ hits, totalHits }) => {
+        const isLastRequest = totalHits <= apiService.page * apiService.perPage;
 
-        {showModal && (
-          <Modal
-            onClose={this.onToggleModal}
-            currentModalData={currentModalData}
-          />
-        )}
+        isLastRequest &&
+          toast.info(
+            `We're sorry, but you've reached the end of search results.`
+          );
 
-        {pending && <Loader />}
+        setImages(prevImages => [...prevImages, ...hits]);
+        onTogglePending();
+        setShowLoadMore(!isLastRequest);
+      })
+      .catch(error => {
+        onTogglePending();
+        toast.error(error);
+      });
+  };
 
-        {showLoadMore && <LoadMore onLoadMore={this.onLoadMore} />}
-      </>
-    );
-  }
-}
+  return (
+    <>
+      <List>
+        <ImageGalleryItem images={images} onHandleClick={onHandleClick} />
+      </List>
+
+      {showModal && (
+        <Modal onClose={onToggleModal} currentModalData={modalData} />
+      )}
+
+      {pending && <Loader />}
+      {showLoadMore && <LoadMore onLoadMore={onLoadMore} />}
+      <ToastContainer />
+    </>
+  );
+};
 
 ImageGallery.propTypes = {
   searchImageQuery: PropTypes.string,
